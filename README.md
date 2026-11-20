@@ -1,5 +1,4 @@
 # MiniHTTPd
-
 Servidor HTTP/1.1 basico en C para Linux, sin bibliotecas HTTP externas.
 Proyecto Integrador de Computacion Distribuida.
 

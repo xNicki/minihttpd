@@ -15,7 +15,6 @@ const char *http_status_text(int code)
     }
 }
 
-/* Copia len bytes en dst sin desbordarlo. Devuelve -1 si no caben. */
 static int copy_bounded(char *dst, size_t size, const char *src, size_t len)
 {
     if (len >= size)
@@ -25,7 +24,6 @@ static int copy_bounded(char *dst, size_t size, const char *src, size_t len)
     return 0;
 }
 
-/* Analiza "GET /ruta HTTP/1.1" */
 static int parse_request_line(const char *line, size_t len, HttpRequest *req)
 {
     const char *sp1 = memchr(line, ' ', len);
@@ -41,31 +39,26 @@ static int parse_request_line(const char *line, size_t len, HttpRequest *req)
     size_t version_len = len - (size_t)(version - line);
     size_t uri_len = (size_t)(sp2 - uri);
 
-    /* Version: HTTP/1.0 o HTTP/1.1 */
     if (version_len != 8 || memcmp(version, "HTTP/1.", 7) != 0 ||
         (version[7] != '0' && version[7] != '1'))
         return PARSE_BAD;
 
-    /* URI: no vacia, empieza con '/' y no es demasiado larga */
     if (uri_len == 0 || uri_len >= MAX_URI || uri[0] != '/')
         return PARSE_BAD;
 
-    /* Se ignora lo que venga despues de '?' o '#' */
     size_t path_len = 0;
     while (path_len < uri_len && uri[path_len] != '?' && uri[path_len] != '#')
         path_len++;
     if (copy_bounded(req->uri, sizeof(req->uri), uri, path_len) < 0)
         return PARSE_BAD;
 
-    /* Solo se permite GET */
     if (sp1 - line != 3 || memcmp(line, "GET", 3) != 0)
         return PARSE_METHOD;
 
-    req->keep_alive = (version[7] == '1');   /* 1.1 = persistente */
+    req->keep_alive = (version[7] == '1');  
     return PARSE_OK;
 }
 
-/* Analiza un encabezado "Nombre: valor" */
 static int parse_header(const char *line, size_t len, HttpRequest *req)
 {
     const char *colon = memchr(line, ':', len);
@@ -76,7 +69,6 @@ static int parse_header(const char *line, size_t len, HttpRequest *req)
     const char *value = colon + 1;
     size_t value_len = len - name_len - 1;
 
-    /* Quitar espacios al inicio y al final del valor */
     while (value_len > 0 && (*value == ' ' || *value == '\t')) {
         value++;
         value_len--;
@@ -106,7 +98,6 @@ int http_parse(const char *buf, size_t len, HttpRequest *req, size_t *used)
     if (memchr(buf, '\0', len) != NULL)
         return PARSE_BAD;
 
-    /* La solicitud termina con una linea en blanco */
     const char *end = strstr(buf, "\r\n\r\n");
     if (end == NULL)
         return (len >= MAX_REQUEST) ? PARSE_BAD : PARSE_INCOMPLETE;
@@ -114,7 +105,6 @@ int http_parse(const char *buf, size_t len, HttpRequest *req, size_t *used)
     *used = (size_t)(end - buf) + 4;
     memset(req, 0, sizeof(*req));
 
-    /* Se recorre linea por linea: primero la solicitud, luego los encabezados */
     const char *block_end = end + 2;
     const char *line = buf;
     int first = 1;
@@ -134,7 +124,7 @@ int http_parse(const char *buf, size_t len, HttpRequest *req, size_t *used)
         line = eol + 2;
     }
 
-    if (req->host[0] == '\0')      /* Host es obligatorio */
+    if (req->host[0] == '\0')      
         return PARSE_BAD;
     return PARSE_OK;
 }
